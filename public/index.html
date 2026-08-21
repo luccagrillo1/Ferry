@@ -19,7 +19,7 @@
     <section class="folders">
       <div class="folder-row">
         <div class="folder-label">Departure</div>
-        <div class="folder-path" id="departurePath">No folder selected</div>
+        <div class="folder-path" id="departurePath" title="Choose a folder to move everything in it, or choose specific files.">No folder or files selected</div>
         <button id="selectDeparture" class="btn">Select…</button>
       </div>
       <div class="folder-arrow">→</div>
@@ -32,7 +32,7 @@
 
     <section class="controls">
       <button id="startBtn" class="btn btn-primary">Start Transfer</button>
-      <button id="stopAfterBtn" class="btn" disabled>Stop After This Transfer</button>
+      <button id="pauseAfterBtn" class="btn" disabled>Pause After This Transfer</button>
       <button id="cancelBtn" class="btn btn-danger" disabled>Cancel</button>
     </section>
 
@@ -50,6 +50,17 @@
     <section class="log-section">
       <div class="log-header">Activity</div>
       <ul id="logList" class="log-list"></ul>
+    </section>
+
+    <section class="notify-section">
+      <label class="notify-toggle">
+        <input type="checkbox" id="ntfyEnabled" />
+        Notify via ntfy when a transfer finishes
+      </label>
+      <div class="notify-fields">
+        <input type="text" id="ntfyTopic" class="text-input" placeholder="ntfy topic" />
+        <input type="text" id="ntfyServer" class="text-input" placeholder="https://ntfy.sh" />
+      </div>
     </section>
   </main>
 

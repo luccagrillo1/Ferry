@@ -3,8 +3,13 @@ const path = require("path");
 
 const DEFAULTS = {
   departureFolder: null,
+  departureMode: "folder", // "folder" | "files"
+  departureFiles: [], // absolute paths, only used when departureMode === "files"
   arrivalFolder: null,
   windowBounds: null,
+  ntfyEnabled: true,
+  ntfyServer: "https://ntfy.sh",
+  ntfyTopic: "ferry-crossing-f5e5ae",
 };
 
 function settingsPath(userDataDir) {

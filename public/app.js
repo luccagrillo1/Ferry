@@ -1,6 +1,21 @@
-const APP_VERSION = "0.1.0";
+const APP_VERSION = "0.3.0";
 
 const CHANGELOG = [
+  {
+    version: "0.3.0",
+    date: "2026-08-21",
+    changes: [
+      "Departure can now be a specific set of files instead of a whole folder — pick individual files in the same picker, or pick a folder to use everything in it.",
+      "Renamed Stop to Pause After This Transfer — Start Transfer becomes Resume Transfer afterward and continues where you left off.",
+    ],
+  },
+  {
+    version: "0.2.0",
+    date: "2026-08-21",
+    changes: [
+      "Optional ntfy push notification when a transfer finishes (moved/failed count).",
+    ],
+  },
   {
     version: "0.1.0",
     date: "2026-08-21",
@@ -27,7 +42,7 @@ const el = {
   selectDeparture: document.getElementById("selectDeparture"),
   selectArrival: document.getElementById("selectArrival"),
   startBtn: document.getElementById("startBtn"),
-  stopAfterBtn: document.getElementById("stopAfterBtn"),
+  pauseAfterBtn: document.getElementById("pauseAfterBtn"),
   cancelBtn: document.getElementById("cancelBtn"),
   progressSection: document.getElementById("progressSection"),
   progressFileName: document.getElementById("progressFileName"),
@@ -38,20 +53,40 @@ const el = {
   changelogBtn: document.getElementById("changelogBtn"),
   changelogModal: document.getElementById("changelogModal"),
   changelogBody: document.getElementById("changelogBody"),
+  ntfyEnabled: document.getElementById("ntfyEnabled"),
+  ntfyTopic: document.getElementById("ntfyTopic"),
+  ntfyServer: document.getElementById("ntfyServer"),
   closeChangelog: document.getElementById("closeChangelog"),
 };
 
 let running = false;
+let wasPaused = false;
 
 function setFolderLabel(target, folderPath) {
   target.textContent = folderPath || "No folder selected";
   target.title = folderPath || "";
 }
 
+function setDepartureLabel(departure) {
+  if (!departure || (departure.mode === "folder" && !departure.folder)) {
+    el.departurePath.textContent = "No folder or files selected";
+    el.departurePath.title = "";
+    return;
+  }
+  if (departure.mode === "files") {
+    const n = departure.files.length;
+    el.departurePath.textContent = `${n} file${n === 1 ? "" : "s"} selected`;
+    el.departurePath.title = departure.files.join("\n");
+  } else {
+    el.departurePath.textContent = departure.folder;
+    el.departurePath.title = departure.folder;
+  }
+}
+
 function setRunningState(isRunning) {
   running = isRunning;
   el.startBtn.disabled = isRunning;
-  el.stopAfterBtn.disabled = !isRunning;
+  el.pauseAfterBtn.disabled = !isRunning;
   el.cancelBtn.disabled = !isRunning;
   el.selectDeparture.disabled = isRunning;
   el.selectArrival.disabled = isRunning;
@@ -79,13 +114,30 @@ function updateProgress(index, total, fileName) {
 
 async function refreshFolders() {
   const settings = await window.ferry.getSettings();
-  setFolderLabel(el.departurePath, settings.departureFolder);
+  setDepartureLabel(settings.departure);
   setFolderLabel(el.arrivalPath, settings.arrivalFolder);
+  el.ntfyEnabled.checked = !!settings.ntfyEnabled;
+  el.ntfyTopic.value = settings.ntfyTopic || "";
+  el.ntfyServer.value = settings.ntfyServer || "https://ntfy.sh";
 }
 
+function saveNotificationSettings() {
+  window.ferry.setNotificationSettings({
+    enabled: el.ntfyEnabled.checked,
+    topic: el.ntfyTopic.value.trim(),
+    server: el.ntfyServer.value.trim() || "https://ntfy.sh",
+  });
+}
+
+el.ntfyEnabled.addEventListener("change", saveNotificationSettings);
+el.ntfyTopic.addEventListener("change", saveNotificationSettings);
+el.ntfyServer.addEventListener("change", saveNotificationSettings);
+
 el.selectDeparture.addEventListener("click", async () => {
-  const folder = await window.ferry.selectDeparture();
-  setFolderLabel(el.departurePath, folder);
+  const departure = await window.ferry.selectDeparture();
+  setDepartureLabel(departure);
+  wasPaused = false;
+  el.startBtn.textContent = "Start Transfer";
 });
 
 el.selectArrival.addEventListener("click", async () => {
@@ -94,26 +146,34 @@ el.selectArrival.addEventListener("click", async () => {
 });
 
 el.startBtn.addEventListener("click", async () => {
-  el.logList.innerHTML = "";
+  if (!wasPaused) el.logList.innerHTML = "";
   el.statusLine.textContent = "";
+  let pausedThisRun = false;
+  const stopListening = window.ferry.onProgress((event) => {
+    if (event.type === "stopped") pausedThisRun = true;
+  });
   setRunningState(true);
   const res = await window.ferry.startTransfer();
+  stopListening();
+  setRunningState(false);
   if (res && res.error) {
     el.statusLine.textContent = res.error;
-    setRunningState(false);
     return;
   }
-  setRunningState(false);
+  wasPaused = pausedThisRun;
+  el.startBtn.textContent = wasPaused ? "Resume Transfer" : "Start Transfer";
   if (res && res.result) {
-    const { moved, skipped, failed } = res.result;
-    el.statusLine.textContent = `Done — ${moved.length} moved, ${failed.length} failed.`;
+    const { moved, failed } = res.result;
+    if (!pausedThisRun) {
+      el.statusLine.textContent = `Done — ${moved.length} moved, ${failed.length} failed.`;
+    }
   }
 });
 
-el.stopAfterBtn.addEventListener("click", () => {
-  window.ferry.stopAfterCurrent();
-  el.stopAfterBtn.disabled = true;
-  el.statusLine.textContent = "Will stop after the current file finishes…";
+el.pauseAfterBtn.addEventListener("click", () => {
+  window.ferry.pauseAfterCurrent();
+  el.pauseAfterBtn.disabled = true;
+  el.statusLine.textContent = "Will pause after the current file finishes…";
 });
 
 el.cancelBtn.addEventListener("click", () => {
@@ -138,19 +198,19 @@ window.ferry.onProgress((event) => {
       el.statusLine.textContent = "Cancelled.";
       break;
     case "stopped":
-      el.statusLine.textContent = "Stopped after current transfer.";
+      el.statusLine.textContent = "Paused after current file.";
       break;
     case "summary":
       if (event.total === 0) {
-        el.statusLine.textContent = "No files found in the departure folder.";
+        el.statusLine.textContent = "No files to move.";
       }
       break;
   }
 });
 
-window.ferry.onStopAfterRequested(() => {
-  el.stopAfterBtn.disabled = true;
-  el.statusLine.textContent = "Will stop after the current file finishes…";
+window.ferry.onPauseAfterRequested(() => {
+  el.pauseAfterBtn.disabled = true;
+  el.statusLine.textContent = "Will pause after the current file finishes…";
 });
 
 window.ferry.onCancelRequested(() => {

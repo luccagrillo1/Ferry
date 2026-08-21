@@ -2,12 +2,13 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("ferry", {
   getSettings: () => ipcRenderer.invoke("settings:get"),
+  setNotificationSettings: (opts) => ipcRenderer.invoke("settings:set-notifications", opts),
   selectDeparture: () => ipcRenderer.invoke("folder:select-departure"),
   selectArrival: () => ipcRenderer.invoke("folder:select-arrival"),
   revealFolder: (folderPath) => ipcRenderer.invoke("folder:reveal", folderPath),
 
   startTransfer: () => ipcRenderer.invoke("transfer:start"),
-  stopAfterCurrent: () => ipcRenderer.invoke("transfer:stop-after-current"),
+  pauseAfterCurrent: () => ipcRenderer.invoke("transfer:pause-after-current"),
   cancelTransfer: () => ipcRenderer.invoke("transfer:cancel"),
 
   onProgress: (callback) => {
@@ -15,10 +16,10 @@ contextBridge.exposeInMainWorld("ferry", {
     ipcRenderer.on("transfer:progress", listener);
     return () => ipcRenderer.removeListener("transfer:progress", listener);
   },
-  onStopAfterRequested: (callback) => {
+  onPauseAfterRequested: (callback) => {
     const listener = () => callback();
-    ipcRenderer.on("transfer:stop-after-requested", listener);
-    return () => ipcRenderer.removeListener("transfer:stop-after-requested", listener);
+    ipcRenderer.on("transfer:pause-after-requested", listener);
+    return () => ipcRenderer.removeListener("transfer:pause-after-requested", listener);
   },
   onCancelRequested: (callback) => {
     const listener = () => callback();

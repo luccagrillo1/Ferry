@@ -56,18 +56,16 @@ async function moveOneFile(srcPath, destPath, signal) {
 }
 
 /**
- * Moves files found (at call time) directly inside departureFolder into arrivalFolder,
- * one at a time, in name order.
+ * Moves the given source files into arrivalFolder, one at a time, in order.
  *
- * @param {string} departureFolder
+ * @param {string[]} sourceFiles - absolute paths of files to move
  * @param {string} arrivalFolder
- * @param {object} control - { cancelled: bool, stopAfterCurrent: bool }, mutated externally to signal state
+ * @param {object} control - { cancelled: bool, pauseAfterCurrent: bool }, mutated externally to signal state
  * @param {(event: object) => void} onProgress
  * @returns {Promise<{moved: string[], skipped: string[], failed: {name: string, error: string}[]}>}
  */
-async function runTransfer(departureFolder, arrivalFolder, control, onProgress) {
-  const files = await listTopLevelFiles(departureFolder);
-  const total = files.length;
+async function runTransfer(sourceFiles, arrivalFolder, control, onProgress) {
+  const total = sourceFiles.length;
   const result = { moved: [], skipped: [], failed: [] };
 
   for (let i = 0; i < total; i += 1) {
@@ -76,8 +74,8 @@ async function runTransfer(departureFolder, arrivalFolder, control, onProgress) 
       break;
     }
 
-    const name = files[i];
-    const srcPath = path.join(departureFolder, name);
+    const srcPath = sourceFiles[i];
+    const name = path.basename(srcPath);
     onProgress({ type: "start", index: i, total, fileName: name });
 
     try {
@@ -95,7 +93,7 @@ async function runTransfer(departureFolder, arrivalFolder, control, onProgress) 
       onProgress({ type: "error", index: i, total, fileName: name, error: err.message });
     }
 
-    if (control.stopAfterCurrent) {
+    if (control.pauseAfterCurrent) {
       onProgress({ type: "stopped", index: i, total });
       break;
     }
