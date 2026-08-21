@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'" />
+<title>Ferry</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="titlebar">
+    <div class="brand">
+      <span class="brand-mark">⛴</span>
+      <span class="brand-name">Ferry</span>
+    </div>
+    <button id="changelogBtn" class="link-btn" title="What's new">What's New</button>
+  </header>
+
+  <main>
+    <section class="folders">
+      <div class="folder-row">
+        <div class="folder-label">Departure</div>
+        <div class="folder-path" id="departurePath">No folder selected</div>
+        <button id="selectDeparture" class="btn">Select…</button>
+      </div>
+      <div class="folder-arrow">→</div>
+      <div class="folder-row">
+        <div class="folder-label">Arrival</div>
+        <div class="folder-path" id="arrivalPath">No folder selected</div>
+        <button id="selectArrival" class="btn">Select…</button>
+      </div>
+    </section>
+
+    <section class="controls">
+      <button id="startBtn" class="btn btn-primary">Start Transfer</button>
+      <button id="stopAfterBtn" class="btn" disabled>Stop After This Transfer</button>
+      <button id="cancelBtn" class="btn btn-danger" disabled>Cancel</button>
+    </section>
+
+    <section class="progress-section" id="progressSection" hidden>
+      <div class="progress-meta">
+        <span id="progressFileName">—</span>
+        <span id="progressCount">0 / 0</span>
+      </div>
+      <div class="progress-bar">
+        <div class="progress-bar-fill" id="progressBarFill"></div>
+      </div>
+      <div class="status-line" id="statusLine"></div>
+    </section>
+
+    <section class="log-section">
+      <div class="log-header">Activity</div>
+      <ul id="logList" class="log-list"></ul>
+    </section>
+  </main>
+
+  <div id="changelogModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-header">
+        <h2>What's New</h2>
+        <button id="closeChangelog" class="link-btn">Close</button>
+      </div>
+      <div id="changelogBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

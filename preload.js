@@ -1,0 +1,33 @@
+const { contextBridge, ipcRenderer } = require("electron");
+
+contextBridge.exposeInMainWorld("ferry", {
+  getSettings: () => ipcRenderer.invoke("settings:get"),
+  selectDeparture: () => ipcRenderer.invoke("folder:select-departure"),
+  selectArrival: () => ipcRenderer.invoke("folder:select-arrival"),
+  revealFolder: (folderPath) => ipcRenderer.invoke("folder:reveal", folderPath),
+
+  startTransfer: () => ipcRenderer.invoke("transfer:start"),
+  stopAfterCurrent: () => ipcRenderer.invoke("transfer:stop-after-current"),
+  cancelTransfer: () => ipcRenderer.invoke("transfer:cancel"),
+
+  onProgress: (callback) => {
+    const listener = (_evt, event) => callback(event);
+    ipcRenderer.on("transfer:progress", listener);
+    return () => ipcRenderer.removeListener("transfer:progress", listener);
+  },
+  onStopAfterRequested: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("transfer:stop-after-requested", listener);
+    return () => ipcRenderer.removeListener("transfer:stop-after-requested", listener);
+  },
+  onCancelRequested: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("transfer:cancel-requested", listener);
+    return () => ipcRenderer.removeListener("transfer:cancel-requested", listener);
+  },
+  onShowChangelog: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("changelog:show", listener);
+    return () => ipcRenderer.removeListener("changelog:show", listener);
+  },
+});

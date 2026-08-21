@@ -1,0 +1,51 @@
+{
+  "name": "ferry",
+  "productName": "Ferry",
+  "version": "0.1.0",
+  "description": "Move files one by one from a departure folder to an arrival folder.",
+  "main": "main.js",
+  "author": "Lucca Grillo",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "install-app": "rm -rf /Applications/Ferry.app && cp -R dist/mac-arm64/Ferry.app /Applications/Ferry.app",
+    "ship": "npm run build && npm run install-app && open /Applications/Ferry.app",
+    "release": "bash scripts/release.sh"
+  },
+  "devDependencies": {
+    "electron": "^42.0.0",
+    "electron-builder": "^26.0.0"
+  },
+  "build": {
+    "appId": "com.canvas.ferry",
+    "productName": "Ferry",
+    "files": [
+      "main.js",
+      "preload.js",
+      "transfer.js",
+      "settings.js",
+      "public/**/*",
+      "build/icon.icns"
+    ],
+    "mac": {
+      "icon": "build/icon.icns",
+      "target": [
+        { "target": "dmg", "arch": ["arm64", "x64"] },
+        { "target": "zip", "arch": ["arm64", "x64"] }
+      ],
+      "category": "public.app-category.utilities",
+      "extendInfo": {
+        "NSDesktopFolderUsageDescription": "Ferry needs access to move your files to or from the Desktop.",
+        "NSDocumentsFolderUsageDescription": "Ferry needs access to move your files to or from Documents.",
+        "NSDownloadsFolderUsageDescription": "Ferry needs access to move your files to or from Downloads.",
+        "NSRemovableVolumesUsageDescription": "Ferry needs access to move your files to or from external drives.",
+        "NSNetworkVolumesUsageDescription": "Ferry needs access to move your files to or from network drives."
+      }
+    },
+    "artifactName": "${productName}-${version}-${arch}.${ext}",
+    "directories": {
+      "output": "dist"
+    }
+  }
+}

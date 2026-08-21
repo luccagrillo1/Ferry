@@ -1,0 +1,275 @@
+:root {
+  --bg: #f4f5f7;
+  --surface: #fff;
+  --border: #dde1e7;
+  --text: #1a1a2e;
+  --muted: #6b7280;
+  --accent: #1c5a94;
+  --accent-hover: #164a7a;
+  --danger: #c0392b;
+  --danger-hover: #a3311f;
+  --success: #1f8a4c;
+  --error: #c0392b;
+}
+
+body.dark {
+  --bg: #141518;
+  --surface: #1d2026;
+  --border: #2c3040;
+  --text: #dfe3ec;
+  --muted: #7a8499;
+  --accent: #4f9ce0;
+  --accent-hover: #6bb0ea;
+  --danger: #e0605a;
+  --danger-hover: #ea7a75;
+  --success: #4cc383;
+  --error: #e0605a;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 13px;
+}
+
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--border);
+  -webkit-app-region: drag;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.brand-mark { font-size: 18px; }
+
+.link-btn {
+  -webkit-app-region: no-drag;
+  background: none;
+  border: none;
+  color: var(--accent);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 4px 6px;
+}
+.link-btn:hover { color: var(--accent-hover); }
+
+main {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.folders {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.folder-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.folder-label {
+  width: 72px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.folder-path {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+}
+
+.folder-arrow {
+  text-align: center;
+  color: var(--muted);
+  font-size: 16px;
+}
+
+.btn {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  border-radius: 7px;
+  padding: 7px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+.btn:hover:not(:disabled) { border-color: var(--accent); }
+.btn:disabled { opacity: 0.4; cursor: default; }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+
+.btn-danger { color: var(--danger); }
+.btn-danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger-hover); }
+
+.controls {
+  display: flex;
+  gap: 10px;
+}
+
+.progress-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+}
+
+.progress-meta {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 8px;
+  color: var(--muted);
+}
+
+#progressFileName {
+  color: var(--text);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 70%;
+}
+
+.progress-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  overflow: hidden;
+}
+
+.progress-bar-fill {
+  height: 100%;
+  width: 0%;
+  background: var(--accent);
+  transition: width 0.15s ease;
+}
+
+.status-line {
+  margin-top: 8px;
+  color: var(--muted);
+  min-height: 16px;
+}
+
+.log-section {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 14px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.log-header {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin-bottom: 8px;
+}
+
+.log-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  max-height: 260px;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 4px;
+}
+
+.log-list li {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+}
+
+.log-list li.ok .log-icon { color: var(--success); }
+.log-list li.error .log-icon { color: var(--error); }
+.log-list li.info .log-icon { color: var(--muted); }
+
+.log-icon { width: 14px; }
+.log-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.log-detail { color: var(--muted); }
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-overlay[hidden] {
+  display: none;
+}
+
+.modal {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  width: 360px;
+  max-height: 70vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-header h2 { font-size: 14px; margin: 0; }
+
+.modal-body {
+  padding: 14px 16px;
+  overflow-y: auto;
+}
+
+.changelog-entry { margin-bottom: 14px; }
+.changelog-entry:last-child { margin-bottom: 0; }
+.changelog-version { font-weight: 600; }
+.changelog-date { color: var(--muted); font-size: 11px; margin-left: 6px; }
+.changelog-entry ul { margin: 6px 0 0; padding-left: 18px; }
+.changelog-entry li { margin-bottom: 2px; }
