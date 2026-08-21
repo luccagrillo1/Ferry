@@ -1,6 +1,13 @@
-const APP_VERSION = "0.3.0";
+const APP_VERSION = "1.0.0";
 
 const CHANGELOG = [
+  {
+    version: "1.0.0",
+    date: "2026-08-21",
+    changes: [
+      "First stable release.",
+    ],
+  },
   {
     version: "0.3.0",
     date: "2026-08-21",
