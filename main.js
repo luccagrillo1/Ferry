@@ -8,7 +8,11 @@ const { sendNtfyNotification } = require("./notify");
 let mainWindow = null;
 let tray = null;
 let settings = null;
+let departureWatcher = null;
 const control = { cancelled: false, pauseAfterCurrent: false, running: false };
+
+const APP_VERSION = require("./package.json").version;
+const UPDATE_REPO = "luccagrillo1/Ferry";
 
 function getSettings() {
   return settings;
@@ -29,6 +33,37 @@ function persistSettings() {
   saveSettings(app.getPath("userData"), settings);
 }
 
+async function broadcastDepartureCount() {
+  if (settings.departureMode !== "folder" || !settings.departureFolder) return;
+  try {
+    const names = await listTopLevelFiles(settings.departureFolder);
+    mainWindow?.webContents.send("departure:count", names.length);
+  } catch {
+    // folder may have been deleted/unmounted; ignore
+  }
+}
+
+function stopDepartureWatcher() {
+  if (departureWatcher) {
+    departureWatcher.close();
+    departureWatcher = null;
+  }
+}
+
+function startDepartureWatcher() {
+  stopDepartureWatcher();
+  if (settings.departureMode !== "folder" || !settings.departureFolder) return;
+  try {
+    let debounce = null;
+    departureWatcher = fs.watch(settings.departureFolder, () => {
+      clearTimeout(debounce);
+      debounce = setTimeout(broadcastDepartureCount, 150);
+    });
+  } catch {
+    // folder may not exist; nothing to watch
+  }
+}
+
 function createWindow() {
   const bounds = settings.windowBounds || { width: 480, height: 620 };
   mainWindow = new BrowserWindow({
@@ -44,6 +79,7 @@ function createWindow() {
   });
 
   mainWindow.loadFile(path.join(__dirname, "public", "index.html"));
+  mainWindow.webContents.once("did-finish-load", () => checkForUpdates());
 
   mainWindow.on("close", () => {
     if (mainWindow) {
@@ -124,6 +160,10 @@ function buildAppMenu() {
           label: "What's New",
           click: () => mainWindow?.webContents.send("changelog:show"),
         },
+        {
+          label: "Check for Updates…",
+          click: () => checkForUpdates(true),
+        },
         { type: "separator" },
         { role: "quit" },
       ],
@@ -134,11 +174,43 @@ function buildAppMenu() {
   Menu.setApplicationMenu(Menu.buildFromTemplate(template));
 }
 
+function isNewerVersion(remote, local) {
+  const r = remote.replace(/^v/, "").split(".").map(Number);
+  const l = local.split(".").map(Number);
+  for (let i = 0; i < 3; i += 1) {
+    if ((r[i] || 0) > (l[i] || 0)) return true;
+    if ((r[i] || 0) < (l[i] || 0)) return false;
+  }
+  return false;
+}
+
+async function checkForUpdates(manual = false) {
+  try {
+    const res = await fetch(`https://api.github.com/repos/${UPDATE_REPO}/releases/latest`, {
+      headers: { Accept: "application/vnd.github+json" },
+    });
+    if (!res.ok) throw new Error(`GitHub API returned ${res.status}`);
+    const data = await res.json();
+    if (isNewerVersion(data.tag_name, APP_VERSION)) {
+      mainWindow?.webContents.send("update:available", {
+        version: data.tag_name,
+        url: data.html_url,
+      });
+    } else if (manual) {
+      mainWindow?.webContents.send("update:none");
+    }
+  } catch (err) {
+    if (manual) mainWindow?.webContents.send("update:none");
+    console.error("[ferry] update check failed:", err.message);
+  }
+}
+
 app.whenReady().then(() => {
   settings = loadSettings(app.getPath("userData"));
   buildAppMenu();
   createWindow();
   createTray();
+  startDepartureWatcher();
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
@@ -181,7 +253,17 @@ ipcMain.handle("folder:select-departure", async () => {
     settings.departureFolder = path.dirname(files[0]);
   }
   persistSettings();
+  startDepartureWatcher();
   return getDepartureSelection();
+});
+
+ipcMain.handle("departure:get-count", async () => {
+  if (settings.departureMode !== "folder" || !settings.departureFolder) return null;
+  try {
+    return (await listTopLevelFiles(settings.departureFolder)).length;
+  } catch {
+    return null;
+  }
 });
 
 ipcMain.handle("folder:select-arrival", async () => {
@@ -194,6 +276,10 @@ ipcMain.handle("folder:select-arrival", async () => {
 
 ipcMain.handle("folder:reveal", async (_evt, folderPath) => {
   if (folderPath) shell.openPath(folderPath);
+});
+
+ipcMain.handle("update:open", async (_evt, url) => {
+  if (url) shell.openExternal(url);
 });
 
 ipcMain.handle("transfer:start", async (evt) => {

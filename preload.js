@@ -6,6 +6,8 @@ contextBridge.exposeInMainWorld("ferry", {
   selectDeparture: () => ipcRenderer.invoke("folder:select-departure"),
   selectArrival: () => ipcRenderer.invoke("folder:select-arrival"),
   revealFolder: (folderPath) => ipcRenderer.invoke("folder:reveal", folderPath),
+  getDepartureCount: () => ipcRenderer.invoke("departure:get-count"),
+  openUpdateUrl: (url) => ipcRenderer.invoke("update:open", url),
 
   startTransfer: () => ipcRenderer.invoke("transfer:start"),
   pauseAfterCurrent: () => ipcRenderer.invoke("transfer:pause-after-current"),
@@ -30,5 +32,20 @@ contextBridge.exposeInMainWorld("ferry", {
     const listener = () => callback();
     ipcRenderer.on("changelog:show", listener);
     return () => ipcRenderer.removeListener("changelog:show", listener);
+  },
+  onDepartureCount: (callback) => {
+    const listener = (_evt, count) => callback(count);
+    ipcRenderer.on("departure:count", listener);
+    return () => ipcRenderer.removeListener("departure:count", listener);
+  },
+  onUpdateAvailable: (callback) => {
+    const listener = (_evt, info) => callback(info);
+    ipcRenderer.on("update:available", listener);
+    return () => ipcRenderer.removeListener("update:available", listener);
+  },
+  onUpdateNone: (callback) => {
+    const listener = () => callback();
+    ipcRenderer.on("update:none", listener);
+    return () => ipcRenderer.removeListener("update:none", listener);
   },
 });

@@ -1,6 +1,14 @@
-const APP_VERSION = "1.0.0";
+const APP_VERSION = "1.1.0";
 
 const CHANGELOG = [
+  {
+    version: "1.1.0",
+    date: "2026-08-21",
+    changes: [
+      "Departure folder shows a live \"N files ready\" count as files appear or leave.",
+      "Checks GitHub for new releases on launch and shows a banner when one's available; \"Check for Updates…\" added to the app menu.",
+    ],
+  },
   {
     version: "1.0.0",
     date: "2026-08-21",
@@ -45,6 +53,8 @@ window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", app
 
 const el = {
   departurePath: document.getElementById("departurePath"),
+  departurePathText: document.getElementById("departurePathText"),
+  departureCount: document.getElementById("departureCount"),
   arrivalPath: document.getElementById("arrivalPath"),
   selectDeparture: document.getElementById("selectDeparture"),
   selectArrival: document.getElementById("selectArrival"),
@@ -64,29 +74,38 @@ const el = {
   ntfyTopic: document.getElementById("ntfyTopic"),
   ntfyServer: document.getElementById("ntfyServer"),
   closeChangelog: document.getElementById("closeChangelog"),
+  updateBanner: document.getElementById("updateBanner"),
+  updateBannerText: document.getElementById("updateBannerText"),
+  updateBannerBtn: document.getElementById("updateBannerBtn"),
 };
 
 let running = false;
 let wasPaused = false;
+let departureFolderMode = false;
 
 function setFolderLabel(target, folderPath) {
   target.textContent = folderPath || "No folder selected";
   target.title = folderPath || "";
 }
 
-function setDepartureLabel(departure) {
+function setDepartureLabel(departure, count) {
+  departureFolderMode = !!departure && departure.mode === "folder";
+  el.departureCount.textContent = "";
   if (!departure || (departure.mode === "folder" && !departure.folder)) {
-    el.departurePath.textContent = "No folder or files selected";
+    el.departurePathText.textContent = "No folder or files selected";
     el.departurePath.title = "";
     return;
   }
   if (departure.mode === "files") {
     const n = departure.files.length;
-    el.departurePath.textContent = `${n} file${n === 1 ? "" : "s"} selected`;
+    el.departurePathText.textContent = `${n} file${n === 1 ? "" : "s"} selected`;
     el.departurePath.title = departure.files.join("\n");
   } else {
-    el.departurePath.textContent = departure.folder;
+    el.departurePathText.textContent = departure.folder;
     el.departurePath.title = departure.folder;
+    if (typeof count === "number") {
+      el.departureCount.textContent = ` (${count} file${count === 1 ? "" : "s"} ready)`;
+    }
   }
 }
 
@@ -119,9 +138,13 @@ function updateProgress(index, total, fileName) {
   el.progressBarFill.style.width = `${pct}%`;
 }
 
+let currentDeparture = null;
+
 async function refreshFolders() {
   const settings = await window.ferry.getSettings();
-  setDepartureLabel(settings.departure);
+  currentDeparture = settings.departure;
+  const count = await window.ferry.getDepartureCount();
+  setDepartureLabel(currentDeparture, count);
   setFolderLabel(el.arrivalPath, settings.arrivalFolder);
   el.ntfyEnabled.checked = !!settings.ntfyEnabled;
   el.ntfyTopic.value = settings.ntfyTopic || "";
@@ -142,7 +165,9 @@ el.ntfyServer.addEventListener("change", saveNotificationSettings);
 
 el.selectDeparture.addEventListener("click", async () => {
   const departure = await window.ferry.selectDeparture();
-  setDepartureLabel(departure);
+  currentDeparture = departure;
+  const count = await window.ferry.getDepartureCount();
+  setDepartureLabel(departure, count);
   wasPaused = false;
   el.startBtn.textContent = "Start Transfer";
 });
@@ -249,5 +274,25 @@ el.changelogModal.addEventListener("click", (e) => {
   if (e.target === el.changelogModal) el.changelogModal.hidden = true;
 });
 window.ferry.onShowChangelog(showChangelog);
+
+window.ferry.onDepartureCount((count) => {
+  if (departureFolderMode) setDepartureLabel(currentDeparture, count);
+});
+
+window.ferry.onUpdateAvailable(({ version, url }) => {
+  el.updateBannerText.textContent = `Ferry ${version} is available (you have v${APP_VERSION}).`;
+  el.updateBannerBtn.onclick = () => window.ferry.openUpdateUrl(url);
+  el.updateBanner.hidden = false;
+});
+
+window.ferry.onUpdateNone(() => {
+  el.updateBannerText.textContent = "You're on the latest version.";
+  el.updateBannerBtn.style.display = "none";
+  el.updateBanner.hidden = false;
+  setTimeout(() => {
+    el.updateBanner.hidden = true;
+    el.updateBannerBtn.style.display = "";
+  }, 3000);
+});
 
 refreshFolders();

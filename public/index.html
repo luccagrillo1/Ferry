@@ -16,16 +16,23 @@
   </header>
 
   <main>
+    <div id="updateBanner" class="update-banner" hidden>
+      <span id="updateBannerText"></span>
+      <button id="updateBannerBtn" class="link-btn">Download</button>
+    </div>
+
     <section class="folders">
       <div class="folder-row">
         <div class="folder-label">Departure</div>
-        <div class="folder-path" id="departurePath" title="Choose a folder to move everything in it, or choose specific files.">No folder or files selected</div>
+        <div class="folder-path" id="departurePath" title="Choose a folder to move everything in it, or choose specific files.">
+          <span id="departurePathText" class="truncate">No folder or files selected</span><span id="departureCount" class="folder-count"></span>
+        </div>
         <button id="selectDeparture" class="btn">Select…</button>
       </div>
       <div class="folder-arrow">→</div>
       <div class="folder-row">
         <div class="folder-label">Arrival</div>
-        <div class="folder-path" id="arrivalPath">No folder selected</div>
+        <div class="folder-path truncate" id="arrivalPath">No folder selected</div>
         <button id="selectArrival" class="btn">Select…</button>
       </div>
     </section>

@@ -99,10 +99,22 @@ main {
 
 .folder-path {
   flex: 1;
+  display: flex;
+  min-width: 0;
+  color: var(--text);
+}
+
+.folder-path.truncate,
+.folder-path > .truncate {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  color: var(--text);
+  min-width: 0;
+}
+
+.folder-count {
+  flex-shrink: 0;
+  color: var(--muted);
 }
 
 .folder-arrow {
@@ -227,6 +239,21 @@ main {
 .log-icon { width: 14px; }
 .log-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .log-detail { color: var(--muted); }
+
+.update-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: color-mix(in srgb, var(--accent) 15%, var(--surface));
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 12px;
+}
+
+.update-banner[hidden] {
+  display: none;
+}
 
 .notify-section {
   background: var(--surface);
