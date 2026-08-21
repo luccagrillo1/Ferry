@@ -32,7 +32,9 @@ A small macOS Electron menu bar app that moves files, one at a time, from a user
 - `scripts/release.sh` / `scripts/release-preflight.js` — adapted from DeckPro's release flow, retargeted to Ferry's artifact names
 
 ## Repo
-Public GitHub repo: `luccagrillo1/Ferry` (not yet created — see release workflow).
+Public GitHub repo: `luccagrillo1/Ferry` (github.com/luccagrillo1/Ferry).
 
 ## Status
-Initial build complete (v0.1.0), not yet run/tested or pushed to GitHub.
+v0.1.0 built, run, and manually verified (folder selection, sequential move, auto-rename on collision, Stop After This Transfer, Cancel, settings persistence across relaunch, changelog modal). Pushed to GitHub.
+
+**Known issue**: the Tray (menu bar) icon does not visibly appear on the dev machine, even with a plain text title and no image — `Tray()` constructs without error and the icon loads correctly (`nativeImage` reports non-empty, correct 22x22 size), so this isn't a code-level bug. Most likely cause: the menu bar is full of other apps' status items and macOS silently drops new ones when there's no room. Not yet confirmed on a machine with a less crowded menu bar. `npm run build` + installing to `/Applications` (real app bundle, not dev `electron .`) hasn't been tried yet either and may behave differently.
