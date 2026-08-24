@@ -38,10 +38,6 @@ async function getQueueEntries() {
   return sortEntries(entries, settings.sortMode);
 }
 
-async function resolveSourceFiles() {
-  return (await getQueueEntries()).map((e) => e.path);
-}
-
 function persistSettings() {
   saveSettings(app.getPath("userData"), settings);
 }
@@ -280,6 +276,11 @@ ipcMain.handle("settings:set-sort", (_evt, sortMode) => {
   broadcastQueue();
 });
 
+ipcMain.handle("settings:set-transfer-mode", (_evt, transferMode) => {
+  settings.transferMode = transferMode === "copy" ? "copy" : "move";
+  persistSettings();
+});
+
 ipcMain.handle("folder:select-arrival", async () => {
   const res = await dialog.showOpenDialog(mainWindow, { properties: ["openDirectory"] });
   if (res.canceled || res.filePaths.length === 0) return settings.arrivalFolder;
@@ -307,8 +308,8 @@ ipcMain.handle("transfer:start", async (evt) => {
     return { error: "Departure and arrival folders must be different." };
   }
 
-  const sourceFiles = await resolveSourceFiles();
-  if (sourceFiles.length === 0) {
+  const sourceEntries = await getQueueEntries();
+  if (sourceEntries.length === 0) {
     return { result: { moved: [], skipped: [], failed: [] } };
   }
 
@@ -319,7 +320,9 @@ ipcMain.handle("transfer:start", async (evt) => {
 
   const sender = evt.sender;
   const onProgress = (event) => {
-    if (event.type === "start" || event.type === "done" || event.type === "error") {
+    if (event.type === "file-progress") {
+      setTrayProgress((event.index + event.bytesCopied / event.bytesTotal) / event.total);
+    } else if (event.type === "start" || event.type === "done" || event.type === "error") {
       setTrayProgress((event.index + (event.type === "start" ? 0 : 1)) / event.total);
     }
     if (event.type === "done" || event.type === "error") broadcastQueue();
@@ -327,11 +330,18 @@ ipcMain.handle("transfer:start", async (evt) => {
   };
 
   try {
-    const result = await runTransfer(sourceFiles, settings.arrivalFolder, control, onProgress);
+    const result = await runTransfer(
+      sourceEntries,
+      settings.arrivalFolder,
+      control,
+      onProgress,
+      settings.transferMode
+    );
     if (result.moved.length + result.failed.length > 0) {
+      const verb = settings.transferMode === "copy" ? "copied" : "moved";
       sendNtfyNotification(settings, {
         title: "Ferry transfer complete",
-        message: `${result.moved.length} moved, ${result.failed.length} failed`,
+        message: `${result.moved.length} ${verb}, ${result.failed.length} failed`,
         tags: result.failed.length > 0 ? "warning" : "white_check_mark",
       }).catch((err) => console.error("[ferry] ntfy notification failed:", err.message));
     }

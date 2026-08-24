@@ -1,6 +1,21 @@
-const APP_VERSION = "1.2.0";
+const APP_VERSION = "1.4.0";
 
 const CHANGELOG = [
+  {
+    version: "1.4.0",
+    date: "2026-08-24",
+    changes: [
+      "Added a Move/Copy toggle — Copy leaves the originals in Departure untouched instead of deleting them after they arrive.",
+    ],
+  },
+  {
+    version: "1.3.0",
+    date: "2026-08-24",
+    changes: [
+      "Real byte-level progress bar and transfer speed for large cross-volume copies, instead of only updating once a whole file finishes.",
+      "Cancel now actually stops a copy mid-file instead of waiting for it to finish first.",
+    ],
+  },
   {
     version: "1.2.0",
     date: "2026-08-21",
@@ -73,6 +88,7 @@ const el = {
   progressFileName: document.getElementById("progressFileName"),
   progressCount: document.getElementById("progressCount"),
   progressBarFill: document.getElementById("progressBarFill"),
+  progressDetail: document.getElementById("progressDetail"),
   statusLine: document.getElementById("statusLine"),
   logList: document.getElementById("logList"),
   changelogBtn: document.getElementById("changelogBtn"),
@@ -88,7 +104,11 @@ const el = {
   queueList: document.getElementById("queueList"),
   queueHeaderLabel: document.getElementById("queueHeaderLabel"),
   sortSelect: document.getElementById("sortSelect"),
+  modeMoveBtn: document.getElementById("modeMoveBtn"),
+  modeCopyBtn: document.getElementById("modeCopyBtn"),
 };
+
+let transferMode = "move";
 
 let running = false;
 let wasPaused = false;
@@ -125,8 +145,26 @@ function setRunningState(isRunning) {
   el.cancelBtn.disabled = !isRunning;
   el.selectDeparture.disabled = isRunning;
   el.selectArrival.disabled = isRunning;
+  el.modeMoveBtn.disabled = isRunning;
+  el.modeCopyBtn.disabled = isRunning;
   el.progressSection.hidden = !isRunning && el.logList.children.length === 0;
 }
+
+function setTransferModeUI(mode) {
+  transferMode = mode;
+  el.modeMoveBtn.classList.toggle("active", mode === "move");
+  el.modeCopyBtn.classList.toggle("active", mode === "copy");
+}
+
+el.modeMoveBtn.addEventListener("click", () => {
+  setTransferModeUI("move");
+  window.ferry.setTransferMode("move");
+});
+
+el.modeCopyBtn.addEventListener("click", () => {
+  setTransferModeUI("copy");
+  window.ferry.setTransferMode("copy");
+});
 
 function addLogEntry(kind, name, detail) {
   const li = document.createElement("li");
@@ -143,8 +181,23 @@ function updateProgress(index, total, fileName) {
   el.progressSection.hidden = false;
   el.progressFileName.textContent = fileName || "—";
   el.progressCount.textContent = `${Math.min(index + 1, total)} / ${total}`;
-  const pct = total > 0 ? Math.round(((index + 1) / total) * 100) : 0;
+}
+
+function setBarFraction(fraction) {
+  const pct = Math.max(0, Math.min(100, fraction * 100));
   el.progressBarFill.style.width = `${pct}%`;
+}
+
+function formatRate(bytesPerSecond) {
+  if (!bytesPerSecond || bytesPerSecond <= 0) return "";
+  return `${formatSize(bytesPerSecond)}/s`;
+}
+
+function updateFileProgress(index, total, bytesCopied, bytesTotal, bytesPerSecond) {
+  setBarFraction((index + (bytesTotal > 0 ? bytesCopied / bytesTotal : 0)) / total);
+  el.progressDetail.hidden = false;
+  const rate = formatRate(bytesPerSecond);
+  el.progressDetail.textContent = `${formatSize(bytesCopied)} of ${formatSize(bytesTotal)}${rate ? ` — ${rate}` : ""}`;
 }
 
 function formatSize(bytes) {
@@ -190,6 +243,7 @@ async function refreshFolders() {
   const settings = await window.ferry.getSettings();
   currentDeparture = settings.departure;
   el.sortSelect.value = settings.sortMode || "name-asc";
+  setTransferModeUI(settings.transferMode || "move");
   const queue = await window.ferry.getQueue();
   setDepartureLabel(currentDeparture, queue.length);
   renderQueue(queue);
@@ -250,7 +304,8 @@ el.startBtn.addEventListener("click", async () => {
   if (res && res.result) {
     const { moved, failed } = res.result;
     if (!pausedThisRun) {
-      el.statusLine.textContent = `Done — ${moved.length} moved, ${failed.length} failed.`;
+      const verb = transferMode === "copy" ? "copied" : "moved";
+      el.statusLine.textContent = `Done — ${moved.length} ${verb}, ${failed.length} failed.`;
     }
   }
 });
@@ -271,15 +326,29 @@ window.ferry.onProgress((event) => {
   switch (event.type) {
     case "start":
       updateProgress(event.index, event.total, event.fileName);
+      setBarFraction(event.index / event.total);
+      el.progressDetail.hidden = true;
+      el.progressDetail.textContent = "";
+      break;
+    case "file-progress":
+      updateFileProgress(event.index, event.total, event.bytesCopied, event.bytesTotal, event.bytesPerSecond);
       break;
     case "done":
       updateProgress(event.index, event.total, event.fileName);
-      addLogEntry("ok", event.fileName, event.destName !== event.fileName ? `→ ${event.destName}` : "moved");
+      setBarFraction((event.index + 1) / event.total);
+      el.progressDetail.hidden = true;
+      addLogEntry(
+        "ok",
+        event.fileName,
+        event.destName !== event.fileName ? `→ ${event.destName}` : transferMode === "copy" ? "copied" : "moved"
+      );
       break;
     case "error":
+      el.progressDetail.hidden = true;
       addLogEntry("error", event.fileName, event.error);
       break;
     case "cancelled":
+      el.progressDetail.hidden = true;
       el.statusLine.textContent = "Cancelled.";
       break;
     case "stopped":

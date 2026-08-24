@@ -146,6 +146,38 @@ main {
 .btn-danger { color: var(--danger); }
 .btn-danger:hover:not(:disabled) { border-color: var(--danger); color: var(--danger-hover); }
 
+.mode-toggle {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  overflow: hidden;
+}
+
+.mode-btn {
+  background: var(--surface);
+  border: none;
+  color: var(--muted);
+  padding: 6px 14px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.mode-btn + .mode-btn {
+  border-left: 1px solid var(--border);
+}
+
+.mode-btn.active {
+  background: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+
+.mode-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .controls {
   display: flex;
   gap: 10px;
@@ -192,6 +224,12 @@ main {
   margin-top: 8px;
   color: var(--muted);
   min-height: 16px;
+}
+
+.progress-detail {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .log-section {

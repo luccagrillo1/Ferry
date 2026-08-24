@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld("ferry", {
   revealFolder: (folderPath) => ipcRenderer.invoke("folder:reveal", folderPath),
   getQueue: () => ipcRenderer.invoke("queue:get"),
   setSortMode: (sortMode) => ipcRenderer.invoke("settings:set-sort", sortMode),
+  setTransferMode: (transferMode) => ipcRenderer.invoke("settings:set-transfer-mode", transferMode),
   openUpdateUrl: (url) => ipcRenderer.invoke("update:open", url),
 
   startTransfer: () => ipcRenderer.invoke("transfer:start"),

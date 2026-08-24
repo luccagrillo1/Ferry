@@ -37,6 +37,11 @@
       </div>
     </section>
 
+    <div class="mode-toggle" id="modeToggle" role="group" aria-label="Move or copy">
+      <button type="button" class="mode-btn active" id="modeMoveBtn" data-mode="move" title="Delete files from Departure after they arrive">Move</button>
+      <button type="button" class="mode-btn" id="modeCopyBtn" data-mode="copy" title="Leave the originals in Departure untouched">Copy</button>
+    </div>
+
     <section class="controls">
       <button id="startBtn" class="btn btn-primary">Start Transfer</button>
       <button id="pauseAfterBtn" class="btn" disabled>Pause After This Transfer</button>
@@ -66,6 +71,7 @@
       <div class="progress-bar">
         <div class="progress-bar-fill" id="progressBarFill"></div>
       </div>
+      <div class="progress-detail" id="progressDetail" hidden></div>
       <div class="status-line" id="statusLine"></div>
     </section>
 
