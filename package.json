@@ -1,7 +1,7 @@
 {
   "name": "ferry",
   "productName": "Ferry",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "description": "Move files one by one from a departure folder to an arrival folder.",
   "main": "main.js",
   "author": "Lucca Grillo",

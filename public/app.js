@@ -1,6 +1,13 @@
-const APP_VERSION = "1.4.0";
+const APP_VERSION = "1.5.0";
 
 const CHANGELOG = [
+  {
+    version: "1.5.0",
+    date: "2026-08-24",
+    changes: [
+      "Fixed a false-alarm error: on flaky external/network drives, deleting the original after a successful copy could occasionally fail because it was already gone by the time Ferry tried — that no longer counts as a failed transfer.",
+    ],
+  },
   {
     version: "1.4.0",
     date: "2026-08-24",

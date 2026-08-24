@@ -130,7 +130,17 @@ async function moveOneFile(srcPath, destPath, size, signal, onFileProgress, mode
     await fsp.unlink(destPath).catch(() => {});
     throw err;
   }
-  await fsp.unlink(srcPath);
+  // The copy already succeeded at this point — the transfer's goal is met.
+  // If the source is already gone (ENOENT), something else beat us to
+  // removing it (flaky network/external volume, or another process); that's
+  // not a failed transfer, so don't report it as one. Any other error here
+  // (permissions, busy, etc.) means the source is still sitting there and
+  // genuinely needs attention, so that one still surfaces.
+  try {
+    await fsp.unlink(srcPath);
+  } catch (err) {
+    if (err.code !== "ENOENT") throw err;
+  }
 }
 
 /**
