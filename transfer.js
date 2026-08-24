@@ -2,12 +2,38 @@ const fs = require("fs");
 const fsp = fs.promises;
 const path = require("path");
 
-async function listTopLevelFiles(folder) {
-  const entries = await fsp.readdir(folder, { withFileTypes: true });
-  return entries
-    .filter((e) => e.isFile() && !e.name.startsWith("."))
-    .map((e) => e.name)
-    .sort((a, b) => a.localeCompare(b));
+async function listTopLevelEntries(folder) {
+  const dirEntries = await fsp.readdir(folder, { withFileTypes: true });
+  const files = dirEntries.filter((e) => e.isFile() && !e.name.startsWith("."));
+  return statEntries(files.map((e) => path.join(folder, e.name)));
+}
+
+async function statEntries(filePaths) {
+  const entries = await Promise.all(
+    filePaths.map(async (p) => {
+      try {
+        const st = await fsp.stat(p);
+        return { name: path.basename(p), path: p, size: st.size, mtime: st.mtimeMs };
+      } catch {
+        return null;
+      }
+    })
+  );
+  return entries.filter(Boolean);
+}
+
+const SORTERS = {
+  "name-asc": (a, b) => a.name.localeCompare(b.name),
+  "name-desc": (a, b) => b.name.localeCompare(a.name),
+  "size-desc": (a, b) => b.size - a.size,
+  "size-asc": (a, b) => a.size - b.size,
+  "date-desc": (a, b) => b.mtime - a.mtime,
+  "date-asc": (a, b) => a.mtime - b.mtime,
+};
+
+function sortEntries(entries, sortMode) {
+  const sorter = SORTERS[sortMode] || SORTERS["name-asc"];
+  return [...entries].sort(sorter);
 }
 
 async function pathExists(p) {
@@ -103,4 +129,4 @@ async function runTransfer(sourceFiles, arrivalFolder, control, onProgress) {
   return result;
 }
 
-module.exports = { runTransfer, listTopLevelFiles, resolveCollisionFreeName };
+module.exports = { runTransfer, listTopLevelEntries, statEntries, sortEntries, resolveCollisionFreeName };

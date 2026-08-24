@@ -6,6 +6,7 @@ const DEFAULTS = {
   departureMode: "folder", // "folder" | "files"
   departureFiles: [], // absolute paths, only used when departureMode === "files"
   arrivalFolder: null,
+  sortMode: "name-asc", // name-asc | name-desc | size-desc | size-asc | date-desc | date-asc
   windowBounds: null,
   ntfyEnabled: true,
   ntfyServer: "https://ntfy.sh",

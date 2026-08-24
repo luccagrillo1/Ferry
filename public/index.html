@@ -43,6 +43,21 @@
       <button id="cancelBtn" class="btn btn-danger" disabled>Cancel</button>
     </section>
 
+    <section class="queue-section">
+      <div class="queue-header">
+        <span id="queueHeaderLabel">Queue</span>
+        <select id="sortSelect" class="text-input sort-select">
+          <option value="name-asc">Name (A→Z)</option>
+          <option value="name-desc">Name (Z→A)</option>
+          <option value="size-desc">Size (largest first)</option>
+          <option value="size-asc">Size (smallest first)</option>
+          <option value="date-desc">Date modified (newest first)</option>
+          <option value="date-asc">Date modified (oldest first)</option>
+        </select>
+      </div>
+      <ul id="queueList" class="queue-list"></ul>
+    </section>
+
     <section class="progress-section" id="progressSection" hidden>
       <div class="progress-meta">
         <span id="progressFileName">—</span>

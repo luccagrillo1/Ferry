@@ -1,6 +1,14 @@
-const APP_VERSION = "1.1.0";
+const APP_VERSION = "1.2.0";
 
 const CHANGELOG = [
+  {
+    version: "1.2.0",
+    date: "2026-08-21",
+    changes: [
+      "Added a Queue section showing exactly which files will move next, in order.",
+      "Added a sort control — by name, size (largest/smallest first), or date modified (newest/oldest first).",
+    ],
+  },
   {
     version: "1.1.0",
     date: "2026-08-21",
@@ -77,11 +85,13 @@ const el = {
   updateBanner: document.getElementById("updateBanner"),
   updateBannerText: document.getElementById("updateBannerText"),
   updateBannerBtn: document.getElementById("updateBannerBtn"),
+  queueList: document.getElementById("queueList"),
+  queueHeaderLabel: document.getElementById("queueHeaderLabel"),
+  sortSelect: document.getElementById("sortSelect"),
 };
 
 let running = false;
 let wasPaused = false;
-let departureFolderMode = false;
 
 function setFolderLabel(target, folderPath) {
   target.textContent = folderPath || "No folder selected";
@@ -89,7 +99,6 @@ function setFolderLabel(target, folderPath) {
 }
 
 function setDepartureLabel(departure, count) {
-  departureFolderMode = !!departure && departure.mode === "folder";
   el.departureCount.textContent = "";
   if (!departure || (departure.mode === "folder" && !departure.folder)) {
     el.departurePathText.textContent = "No folder or files selected";
@@ -138,13 +147,52 @@ function updateProgress(index, total, fileName) {
   el.progressBarFill.style.width = `${pct}%`;
 }
 
+function formatSize(bytes) {
+  if (bytes < 1024) return `${bytes} B`;
+  const units = ["KB", "MB", "GB", "TB"];
+  let val = bytes / 1024;
+  let i = 0;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i += 1;
+  }
+  return `${val.toFixed(val < 10 ? 1 : 0)} ${units[i]}`;
+}
+
+function formatDate(mtimeMs) {
+  return new Date(mtimeMs).toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
+function renderQueue(entries) {
+  el.queueHeaderLabel.textContent = `Queue (${entries.length})`;
+  el.queueList.innerHTML = "";
+  if (entries.length === 0) {
+    const li = document.createElement("li");
+    li.className = "queue-empty";
+    li.textContent = "Nothing queued.";
+    el.queueList.appendChild(li);
+    return;
+  }
+  entries.forEach((entry, i) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span class="queue-index"></span><span class="queue-name"></span><span class="queue-meta"></span>`;
+    li.querySelector(".queue-index").textContent = `${i + 1}.`;
+    li.querySelector(".queue-name").textContent = entry.name;
+    li.querySelector(".queue-name").title = entry.name;
+    li.querySelector(".queue-meta").textContent = `${formatSize(entry.size)} · ${formatDate(entry.mtime)}`;
+    el.queueList.appendChild(li);
+  });
+}
+
 let currentDeparture = null;
 
 async function refreshFolders() {
   const settings = await window.ferry.getSettings();
   currentDeparture = settings.departure;
-  const count = await window.ferry.getDepartureCount();
-  setDepartureLabel(currentDeparture, count);
+  el.sortSelect.value = settings.sortMode || "name-asc";
+  const queue = await window.ferry.getQueue();
+  setDepartureLabel(currentDeparture, queue.length);
+  renderQueue(queue);
   setFolderLabel(el.arrivalPath, settings.arrivalFolder);
   el.ntfyEnabled.checked = !!settings.ntfyEnabled;
   el.ntfyTopic.value = settings.ntfyTopic || "";
@@ -166,10 +214,15 @@ el.ntfyServer.addEventListener("change", saveNotificationSettings);
 el.selectDeparture.addEventListener("click", async () => {
   const departure = await window.ferry.selectDeparture();
   currentDeparture = departure;
-  const count = await window.ferry.getDepartureCount();
-  setDepartureLabel(departure, count);
+  const queue = await window.ferry.getQueue();
+  setDepartureLabel(departure, queue.length);
+  renderQueue(queue);
   wasPaused = false;
   el.startBtn.textContent = "Start Transfer";
+});
+
+el.sortSelect.addEventListener("change", () => {
+  window.ferry.setSortMode(el.sortSelect.value);
 });
 
 el.selectArrival.addEventListener("click", async () => {
@@ -275,8 +328,9 @@ el.changelogModal.addEventListener("click", (e) => {
 });
 window.ferry.onShowChangelog(showChangelog);
 
-window.ferry.onDepartureCount((count) => {
-  if (departureFolderMode) setDepartureLabel(currentDeparture, count);
+window.ferry.onQueueUpdate((entries) => {
+  renderQueue(entries);
+  setDepartureLabel(currentDeparture, entries.length);
 });
 
 window.ferry.onUpdateAvailable(({ version, url }) => {

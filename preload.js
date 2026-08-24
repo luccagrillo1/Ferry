@@ -6,7 +6,8 @@ contextBridge.exposeInMainWorld("ferry", {
   selectDeparture: () => ipcRenderer.invoke("folder:select-departure"),
   selectArrival: () => ipcRenderer.invoke("folder:select-arrival"),
   revealFolder: (folderPath) => ipcRenderer.invoke("folder:reveal", folderPath),
-  getDepartureCount: () => ipcRenderer.invoke("departure:get-count"),
+  getQueue: () => ipcRenderer.invoke("queue:get"),
+  setSortMode: (sortMode) => ipcRenderer.invoke("settings:set-sort", sortMode),
   openUpdateUrl: (url) => ipcRenderer.invoke("update:open", url),
 
   startTransfer: () => ipcRenderer.invoke("transfer:start"),
@@ -33,10 +34,10 @@ contextBridge.exposeInMainWorld("ferry", {
     ipcRenderer.on("changelog:show", listener);
     return () => ipcRenderer.removeListener("changelog:show", listener);
   },
-  onDepartureCount: (callback) => {
-    const listener = (_evt, count) => callback(count);
-    ipcRenderer.on("departure:count", listener);
-    return () => ipcRenderer.removeListener("departure:count", listener);
+  onQueueUpdate: (callback) => {
+    const listener = (_evt, entries) => callback(entries);
+    ipcRenderer.on("queue:update", listener);
+    return () => ipcRenderer.removeListener("queue:update", listener);
   },
   onUpdateAvailable: (callback) => {
     const listener = (_evt, info) => callback(info);

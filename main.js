@@ -2,7 +2,7 @@ const { app, BrowserWindow, Tray, Menu, nativeImage, dialog, ipcMain, shell } = 
 const path = require("path");
 const fs = require("fs");
 const { loadSettings, saveSettings } = require("./settings");
-const { runTransfer, listTopLevelFiles } = require("./transfer");
+const { runTransfer, listTopLevelEntries, statEntries, sortEntries } = require("./transfer");
 const { sendNtfyNotification } = require("./notify");
 
 let mainWindow = null;
@@ -18,29 +18,40 @@ function getSettings() {
   return settings;
 }
 
-// Resolves the current departure selection (folder or explicit files) into an
-// absolute-path list to move. Re-derived on every call so a rerun after a
-// pause naturally skips files already moved (they no longer exist).
-async function resolveSourceFiles() {
+// Resolves the current departure selection (folder or explicit files) into a
+// sorted, stat'd entry list — the single source of truth for both the Queue
+// Viewer and the actual move order. Re-derived on every call so a rerun after
+// a pause naturally skips files already moved (they no longer exist).
+async function getQueueEntries() {
+  let entries;
   if (settings.departureMode === "files") {
-    return settings.departureFiles.filter((f) => fs.existsSync(f));
+    entries = await statEntries(settings.departureFiles.filter((f) => fs.existsSync(f)));
+  } else if (settings.departureFolder) {
+    try {
+      entries = await listTopLevelEntries(settings.departureFolder);
+    } catch {
+      entries = [];
+    }
+  } else {
+    entries = [];
   }
-  const names = await listTopLevelFiles(settings.departureFolder);
-  return names.map((name) => path.join(settings.departureFolder, name));
+  return sortEntries(entries, settings.sortMode);
+}
+
+async function resolveSourceFiles() {
+  return (await getQueueEntries()).map((e) => e.path);
 }
 
 function persistSettings() {
   saveSettings(app.getPath("userData"), settings);
 }
 
-async function broadcastDepartureCount() {
-  if (settings.departureMode !== "folder" || !settings.departureFolder) return;
-  try {
-    const names = await listTopLevelFiles(settings.departureFolder);
-    mainWindow?.webContents.send("departure:count", names.length);
-  } catch {
-    // folder may have been deleted/unmounted; ignore
-  }
+async function broadcastQueue() {
+  const entries = await getQueueEntries();
+  mainWindow?.webContents.send(
+    "queue:update",
+    entries.map((e) => ({ name: e.name, size: e.size, mtime: e.mtime }))
+  );
 }
 
 function stopDepartureWatcher() {
@@ -57,7 +68,7 @@ function startDepartureWatcher() {
     let debounce = null;
     departureWatcher = fs.watch(settings.departureFolder, () => {
       clearTimeout(debounce);
-      debounce = setTimeout(broadcastDepartureCount, 150);
+      debounce = setTimeout(broadcastQueue, 150);
     });
   } catch {
     // folder may not exist; nothing to watch
@@ -254,16 +265,19 @@ ipcMain.handle("folder:select-departure", async () => {
   }
   persistSettings();
   startDepartureWatcher();
+  broadcastQueue();
   return getDepartureSelection();
 });
 
-ipcMain.handle("departure:get-count", async () => {
-  if (settings.departureMode !== "folder" || !settings.departureFolder) return null;
-  try {
-    return (await listTopLevelFiles(settings.departureFolder)).length;
-  } catch {
-    return null;
-  }
+ipcMain.handle("queue:get", async () => {
+  const entries = await getQueueEntries();
+  return entries.map((e) => ({ name: e.name, size: e.size, mtime: e.mtime }));
+});
+
+ipcMain.handle("settings:set-sort", (_evt, sortMode) => {
+  settings.sortMode = sortMode;
+  persistSettings();
+  broadcastQueue();
 });
 
 ipcMain.handle("folder:select-arrival", async () => {
@@ -308,6 +322,7 @@ ipcMain.handle("transfer:start", async (evt) => {
     if (event.type === "start" || event.type === "done" || event.type === "error") {
       setTrayProgress((event.index + (event.type === "start" ? 0 : 1)) / event.total);
     }
+    if (event.type === "done" || event.type === "error") broadcastQueue();
     sender.send("transfer:progress", event);
   };
 
